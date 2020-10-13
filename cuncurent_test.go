@@ -4,15 +4,13 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/bluele/gcache"
-	"github.com/khevse/scache"
 	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkCuncurrentSCache(b *testing.B) {
 
 	loadFunc, keys, size := getPropsBenchmark(b)
-	cache, err := scache.New(10, int64(size)).LRU().LoaderFunc(scache.LoadFunc(loadFunc)).Build()
+	cache, err := NewWrapperSCache(loadFunc, size)
 	require.NoError(b, err)
 	defer cache.Close()
 
@@ -22,7 +20,8 @@ func BenchmarkCuncurrentSCache(b *testing.B) {
 func BenchmarkCuncurrentGCache(b *testing.B) {
 
 	loadFunc, keys, size := getPropsBenchmark(b)
-	cache := gcache.New(size).LRU().LoaderFunc(gcache.LoaderFunc(loadFunc)).Build()
+	cache, err := NewWrapperGCache(loadFunc, size)
+	require.NoError(b, err)
 
 	invokeBenchmarkCuncurrent(b, keys, cache)
 }

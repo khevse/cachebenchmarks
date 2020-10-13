@@ -2,6 +2,7 @@ package cachebenchmarks
 
 import (
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -29,9 +30,21 @@ func getPropsBenchmark(b *testing.B) (loadFunc LoadFunc, keys []interface{}, siz
 
 func getKeysForBenchmark(count int) (keys []interface{}) {
 
+	prefixSymbols := make([]rune, 0, 100)
+	for r := 'a'; r < 'z'; r++ {
+		prefixSymbols = append(prefixSymbols, r)
+	}
+	for r := 'A'; r < 'Z'; r++ {
+		prefixSymbols = append(prefixSymbols, r)
+	}
+	for r := '0'; r < '9'; r++ {
+		prefixSymbols = append(prefixSymbols, r)
+	}
+
 	keys = make([]interface{}, count)
 	for i := 0; i < count; i++ {
-		keys[i] = "------" + strconv.Itoa(i) // "----" - check hash function for shard id
+		prefix := prefixSymbols[i%len(prefixSymbols)] // prefix check hash function for shard id
+		keys[i] = strings.Repeat(string(prefix), 10) + strconv.Itoa(i)
 	}
 
 	return

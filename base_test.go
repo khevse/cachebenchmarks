@@ -4,15 +4,14 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/bluele/gcache"
-	"github.com/khevse/scache"
 	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkBaseGCache(b *testing.B) {
 
 	loadFunc, keys, size := getPropsBenchmark(b)
-	cache := gcache.New(size).LRU().LoaderFunc(gcache.LoaderFunc(loadFunc)).Build()
+	cache, err := NewWrapperGCache(loadFunc, size)
+	require.NoError(b, err)
 
 	invokeBenchmarkBase(b, keys, cache)
 }
@@ -20,7 +19,7 @@ func BenchmarkBaseGCache(b *testing.B) {
 func BenchmarkBaseSCache(b *testing.B) {
 
 	loadFunc, keys, size := getPropsBenchmark(b)
-	cache, err := scache.New(10, int64(size)).LRU().LoaderFunc(scache.LoadFunc(loadFunc)).Build()
+	cache, err := NewWrapperSCache(loadFunc, size)
 	require.NoError(b, err)
 	defer cache.Close()
 
@@ -50,8 +49,8 @@ func invokeBenchmarkBase(b *testing.B, keys []interface{}, cache interface {
 	Get(interface{}) (interface{}, error)
 }) {
 
-	gcacheVal, iGCache := cache.(gcache.Cache)
-	scacheVal, iSCache := cache.(*scache.Cache)
+	gcacheVal, iGCache := cache.(*WrapperGCache)
+	scacheVal, iSCache := cache.(*WrapperSCache)
 	ristrettoVal, iRistretto := cache.(*WrapperRistretto)
 	ccacheVal, iCcache := cache.(*WrapperCCache)
 
@@ -71,16 +70,13 @@ func invokeBenchmarkBase(b *testing.B, keys []interface{}, cache interface {
 		switch op {
 		case 1:
 			if iGCache {
-				gcacheVal.Remove(key)
-				gcacheVal.Len(true)
+				gcacheVal.Native.Remove(key)
 			} else if iSCache {
-				scacheVal.Del(key)
-				scacheVal.Count()
+				scacheVal.Native.Del(key)
 			} else if iRistretto {
 				ristrettoVal.Native.Del(key)
 			} else if iCcache {
 				ccacheVal.Native.Delete(key.(string))
-				ccacheVal.Native.ItemCount()
 			} else {
 				panic("unknown library")
 			}
@@ -96,9 +92,9 @@ func invokeBenchmarkBase(b *testing.B, keys []interface{}, cache interface {
 
 	var count int
 	if iGCache {
-		count = int(gcacheVal.Len(true))
+		count = int(gcacheVal.Native.Len(true))
 	} else if iSCache {
-		count = int(scacheVal.Count())
+		count = int(scacheVal.Native.Count())
 	} else if iRistretto {
 		// not found method
 	} else if iCcache {

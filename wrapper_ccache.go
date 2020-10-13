@@ -9,7 +9,9 @@ type WrapperCCache struct {
 
 func NewWrapperCCache(loadFunc LoadFunc, size int) (*WrapperCCache, error) {
 
-	cache := ccache.New(ccache.Configure().MaxSize(int64(size)).ItemsToPrune(10))
+	cache := ccache.New(ccache.Configure().MaxSize(int64(size)).
+		Buckets(100).
+		ItemsToPrune(10))
 
 	return &WrapperCCache{
 		Native: cache,
@@ -18,6 +20,7 @@ func NewWrapperCCache(loadFunc LoadFunc, size int) (*WrapperCCache, error) {
 }
 
 func (w *WrapperCCache) Get(key interface{}) (val interface{}, err error) {
+
 	k := key.(string)
 	item := w.Native.Get(k)
 	if item == nil || item.Expired() {
@@ -25,8 +28,8 @@ func (w *WrapperCCache) Get(key interface{}) (val interface{}, err error) {
 		if err == nil {
 			w.Native.Set(k, val, 0)
 		}
-	} else {
 
+	} else {
 		val = item.Value()
 	}
 
